@@ -1,0 +1,1 @@
+IF EXIST %userprofile%\CS4432DB rd /s /q %userprofile%\CS4432DB
