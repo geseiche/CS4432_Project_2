@@ -5,6 +5,7 @@ import simpledb.record.*;
 import simpledb.query.*;
 import simpledb.index.Index;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 //CS4432:Added entire class to implement extensible hashing
@@ -16,15 +17,18 @@ import java.util.HashMap;
  * @author Edward Sciore
  */
 public class ExHashIndex implements Index {
-    private int NUM_BUCKETS = 4; //number of buckets in the directory
-    private int globalDepth = 2; //global depth of the directory
-    private static int MAX_BCKT_CAP = 8; //max number of keys in each bucket
-    private HashMap<Integer, Bucket> buckets = new HashMap<>(); //list of all the buckets that the directory points to
+    private int NUM_BUCKETS = 1; //number of buckets in the directory
+    private int globalDepth = 1; //global depth of the directory
+    private static int MAX_BCKT_CAP = 4; //max number of keys in each bucket
+    private static String GLOBAL_TABLE = "globalTable";
     private String idxname;
     private Schema sch;
+    private Schema globalSchema; //schema for the directory
     private Transaction tx;
     private Constant searchkey = null;
     private TableScan ts = null;
+    private int localDepth;
+    private String bucketFileName;
 
     /**
      * Opens a hash index for the specified index.
@@ -36,6 +40,18 @@ public class ExHashIndex implements Index {
         this.idxname = idxname;
         this.sch = sch;
         this.tx = tx;
+        this.globalSchema.addIntField("bits");
+        this.globalSchema.addStringField("filename", 20);
+        this.globalSchema.addIntField("localdepth");
+        TableScan tempScan = new TableScan(new TableInfo(GLOBAL_TABLE, globalSchema),tx);
+        tempScan.insert();
+        tempScan.setInt("bits", 0);
+        tempScan.setString("filename", this.idxname + 0);
+        tempScan.setInt("localdepth", 1);
+        tempScan.insert();
+        tempScan.setInt("bits", 1);
+        tempScan.setString("filename", this.idxname + 1);
+        tempScan.setInt("localdepth", 1);
     }
 
     /**
@@ -52,8 +68,22 @@ public class ExHashIndex implements Index {
         this.searchkey = searchkey;
         int bucket = searchkey.hashCode() % (int)Math.pow(2, globalDepth);//Mask the last global_length bits
         //TODO
-        String tblname = idxname + bucket;
-        TableInfo ti = new TableInfo(tblname, sch);
+        //make global table TAbleInfo w Schema (bit, filename, localdepth)
+        TableInfo global = new TableInfo(GLOBAL_TABLE, globalSchema);
+        //new table scan on global table
+        TableScan tempScan = new TableScan(global, tx);
+        //call next until you find the bit string
+        //get file name and localdepth w getVal() and store
+        while (tempScan.next()){
+            if(tempScan.getInt("bits")== bucket){
+                localDepth = tempScan.getInt("localdepth");
+                bucketFileName = tempScan.getString("filename");
+                break;
+            }
+        }
+        //use the bucket table name in the given ti
+        String tblname = idxname + bucket; //do I even still need this?
+        TableInfo ti = new TableInfo(bucketFileName, sch);
         ts = new TableScan(ti, tx);
     }
 
@@ -88,6 +118,75 @@ public class ExHashIndex implements Index {
      */
     public void insert(Constant val, RID rid) {
         beforeFirst(val);
+        //TODO check if bucket is full or needs to be split, if so, split; where does the local depth go?
+        //get length by calling next
+        int size = 0;
+        while (ts.next()){
+            size++;
+        }
+        while(size>=MAX_BCKT_CAP){
+            TableScan tempScan = new TableScan(new TableInfo(GLOBAL_TABLE, globalSchema), tx);
+            //if localdepth = globaldepth
+            if(localDepth == globalDepth){
+                //read global file
+                //delete all the records
+                //re-insert with longer bit string
+                globalDepth++;
+                ArrayList<Bucket> tempList = new ArrayList<>();
+                while (tempScan.next()){
+                    tempList.add(new Bucket(tempScan.getInt("bits")+ (int)Math.pow(2, globalDepth-1), tempScan.getString("filename"), tempScan.getInt("localdepth")));
+                }
+                for (Bucket b : tempList){
+                    tempScan.insert();
+                    tempScan.setInt("bits", b.getBits());
+                    tempScan.setString("filename", b.getFileName());
+                    tempScan.setInt("localdepth", b.getLocalDepth());
+                }
+            }
+
+            //increase local depth
+            localDepth++;
+
+            //split the bucket
+            String bucketNameA = bucketFileName;
+            TableScan scanA = new TableScan(new TableInfo(bucketNameA,sch),tx);
+            int bucketBbits = (searchkey.hashCode() % (int)Math.pow(2, localDepth-1))+ (int)Math.pow(2, localDepth-1);
+            String bucketNameB = idxname + bucketBbits;
+            TableScan scanB = new TableScan(new TableInfo(bucketNameB,sch),tx);
+            while (scanA.next()){
+                if (scanA.getVal("dataval").hashCode()%(int)Math.pow(2, localDepth)== bucketBbits){
+                    //remove from A and add to B
+                    scanB.insert();
+                    scanB.setInt("block", scanA.getInt("block"));
+                    scanB.setInt("id", scanA.getInt("id"));
+                    scanB.setVal("dataval", scanA.getVal("dataval"));
+                    scanA.delete();
+                }
+            }
+
+            //change filenames in table
+            tempScan.beforeFirst();
+            int mostSigBit = (int)Math.pow(2, localDepth-1);
+            while (tempScan.next()){
+                int bucket = tempScan.getInt("bits");
+                if(bucket % mostSigBit == searchkey.hashCode() % mostSigBit){
+                    if(bucket/mostSigBit>=1){
+                        tempScan.setString("filename", bucketNameB);
+                    } else {
+                        tempScan.setString("filename", bucketNameA);
+                    }
+                }
+            }
+
+            //set ts to new bucket
+            beforeFirst(val);
+
+            //get length by calling next
+            size = 0;
+            while (ts.next()){
+                size++;
+            }
+        }
         ts.insert();
         ts.setInt("block", rid.blockNumber());
         ts.setInt("id", rid.id());
