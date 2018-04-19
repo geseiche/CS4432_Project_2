@@ -12,6 +12,7 @@ public class TableInfo {
    private Schema schema;
    private Map<String,Integer> offsets;
    private int recordlen;
+   private boolean isSorted;
    private String tblname;
    
    /**

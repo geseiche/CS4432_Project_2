@@ -60,7 +60,7 @@ public class MergeJoinScan implements Scan {
     * When one of the scans runs out of records, return false.
     * @see simpledb.query.Scan#next()
     */
-   public boolean next() {
+   public boolean next() { //TODO: Split into runs and keep going until its time to merge the sorted runs
       boolean hasmore2 = s2.next();
       if (hasmore2 && s2.getVal(fldname2).equals(joinval))
          return true;

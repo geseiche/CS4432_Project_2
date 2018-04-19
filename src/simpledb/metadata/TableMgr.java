@@ -19,6 +19,7 @@ public class TableMgr {
     * Currently, this value is 16.
     */
    public static final int MAX_NAME = 16;
+   private static final String SORTED = "sorted";
    
    private TableInfo tcatInfo, fcatInfo;
    
@@ -29,7 +30,7 @@ public class TableMgr {
     * @param isNew has the value true if the database is new
     * @param tx the startup transaction
     */
-   public TableMgr(boolean isNew, Transaction tx) {
+   public TableMgr(boolean isNew, Transaction tx) { //TODO: Modify this so that you can get and set the sorted bit into the TableInfo
       Schema tcatSchema = new Schema();
       tcatSchema.addStringField("tblname", MAX_NAME);
       tcatSchema.addIntField("reclength");
@@ -62,6 +63,7 @@ public class TableMgr {
       tcatfile.insert();
       tcatfile.setString("tblname", tblname);
       tcatfile.setInt("reclength", ti.recordLength());
+      tcatfile.setInt(SORTED,0);
       tcatfile.close();
       
       // insert a record into fldcat for each field
@@ -84,12 +86,14 @@ public class TableMgr {
     * @param tx the transaction
     * @return the table's stored metadata
     */
-   public TableInfo getTableInfo(String tblname, Transaction tx) {
+   public TableInfo getTableInfo(String tblname, Transaction tx) { //TODO: Use this to get the table info.
       RecordFile tcatfile = new RecordFile(tcatInfo, tx);
       int reclen = -1;
+      boolean isSorted;
       while (tcatfile.next())
          if(tcatfile.getString("tblname").equals(tblname)) {
          reclen = tcatfile.getInt("reclength");
+         isSorted = tcatfile.getInt("sorted") != 0;
          break;
       }
       tcatfile.close();
@@ -108,5 +112,15 @@ public class TableMgr {
       }
       fcatfile.close();
       return new TableInfo(tblname, sch, offsets, reclen);
+   }
+
+   public void setTableSorted(String tblname, Transaction tx, boolean isSorted) {
+      RecordFile tcatfile = new RecordFile(tcatInfo, tx);
+      while (tcatfile.next())
+         if(tcatfile.getString("tblname").equals(tblname)) {
+            tcatfile.setInt(SORTED, isSorted ? 1 : 0);
+            break;
+         }
+      tcatfile.close();
    }
 }

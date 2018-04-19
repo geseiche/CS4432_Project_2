@@ -59,7 +59,7 @@ public class SortScan implements Scan {
     * scan is chosen to be the new current scan.
     * @see simpledb.query.Scan#next()
     */
-   public boolean next() {
+   public boolean next() { //TODO: Do sorting here
       if (currentscan != null) {
          if (currentscan == s1)
             hasmore1 = s1.next();
