@@ -9,7 +9,7 @@ import simpledb.query.*;
 public class MergeJoinScan implements Scan {
    private Scan s1;
    private SortScan s2;
-   private String fldname1, fldname2;
+   private String tblname1, tblname2, fldname1, fldname2;
    private Constant joinval = null;
    
    /**
@@ -19,9 +19,11 @@ public class MergeJoinScan implements Scan {
     * @param fldname1 the LHS join field
     * @param fldname2 the RHS join field
     */
-   public MergeJoinScan(Scan s1, SortScan s2, String fldname1, String fldname2) {
+   public MergeJoinScan(Scan s1, SortScan s2, String tblname1, String tblname2, String fldname1, String fldname2) {
       this.s1 = s1;
       this.s2 = s2;
+      this.tblname1 = tblname1;
+      this.tblname2 = tblname2;
       this.fldname1 = fldname1;
       this.fldname2 = fldname2;
       beforeFirst();
@@ -60,7 +62,7 @@ public class MergeJoinScan implements Scan {
     * When one of the scans runs out of records, return false.
     * @see simpledb.query.Scan#next()
     */
-   public boolean next() { //TODO: Split into runs and keep going until its time to merge the sorted runs
+   public boolean next() { //TODO: Split into runs and keep going until its time to merge the sorted runs (Use SimpleDB.mdMgr().getTableInfo(tblname, tx); to get the TableInfo)
       boolean hasmore2 = s2.next();
       if (hasmore2 && s2.getVal(fldname2).equals(joinval))
          return true;

@@ -25,7 +25,7 @@ public class SortScan implements Scan {
     * @param runs the list of runs
     * @param comp the record comparator
     */
-   public SortScan(List<TempTable> runs, RecordComparator comp) {
+   public SortScan(List<TempTable> runs, RecordComparator comp) { //TODO: Pass the table names into this class to be used while sorting
       this.comp = comp;
       s1 = (UpdateScan) runs.get(0).open();
       hasmore1 = s1.next();

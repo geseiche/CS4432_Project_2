@@ -8,8 +8,7 @@ import simpledb.planner.QueryPlanner;
 import java.util.*;
 
 /**
- * A query planner that optimizes using a heuristic-based algorithm.
- * @author Edward Sciore
+ * CS4432: A query planner that performs a SortMergeJoin on the tables
  */
 public class SortingQueryPlanner implements QueryPlanner {
     private Collection<TablePlanner> tableplanners = new ArrayList<TablePlanner>();
@@ -64,7 +63,7 @@ public class SortingQueryPlanner implements QueryPlanner {
         TablePlanner besttp = null;
         Plan bestplan = null;
         for (TablePlanner tp : tableplanners) {
-            Plan plan = tp.makeJoinPlan(current);
+            Plan plan = tp.makeMergeJoinPlan(current); // CS4432: Create the MergeJoinPlan for the smart merge join
             if (plan != null && (bestplan == null || plan.recordsOutput() < bestplan.recordsOutput())) {
                 besttp = tp;
                 bestplan = plan;

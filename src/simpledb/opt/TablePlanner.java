@@ -1,5 +1,6 @@
 package simpledb.opt;
 
+import simpledb.materialize.MergeJoinPlan;
 import simpledb.tx.Transaction;
 import simpledb.record.Schema;
 import simpledb.query.*;
@@ -69,7 +70,25 @@ class TablePlanner {
          p = makeProductJoin(current, currsch);
       return p;
    }
-   
+
+   /**
+    * Constructs a join plan of the specified plan
+    * and the table. The plan will use an MergeJoinPlan.
+    * The method returns null if no join is possible.
+    * @param current the specified plan
+    * @return a join plan of the plan and this table
+    */
+   public Plan makeMergeJoinPlan(Plan current) {
+      Schema currsch = current.schema();
+      String tblname1 = myplan.tableName(); // Get the table name to pass down to SortScan
+      String tblname2 = current.tableName(); // Get the table name to pass down to SortScan
+      Predicate joinpred = mypred.joinPred(myschema, currsch);
+      if (joinpred == null)
+         return null;
+      Plan p = makeMergeJoin(current, currsch, tblname1, tblname2);
+      return p;
+   }
+
    /**
     * Constructs a product plan of the specified plan and
     * this table.
@@ -108,6 +127,22 @@ class TablePlanner {
    private Plan makeProductJoin(Plan current, Schema currsch) {
       Plan p = makeProductPlan(current);
       return addJoinPred(p, currsch);
+   }
+
+   /**
+    * CS4432: Creates the MergeJoinPlan.
+    * @return A MergeJoinPlan to merge on, or null if no merge is possible (No like fields)
+    */
+   private Plan makeMergeJoin(Plan current, Schema currsch, String tblname1, String tblname2) {
+      for (String fldname : myschema.fields()) {
+         String outerfield = mypred.equatesWithField(fldname);
+         if (outerfield != null && currsch.hasField(outerfield)) {
+            Plan p = new MergeJoinPlan(myplan, current, tblname1, tblname2, fldname, outerfield, tx); // Create the MergeJoinPlan on the matching fields
+            p = addSelectPred(p);
+            return addJoinPred(p, currsch);
+         }
+      }
+      return null;
    }
    
    private Plan addSelectPred(Plan p) {

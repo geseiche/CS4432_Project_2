@@ -63,7 +63,7 @@ public class TableMgr {
       tcatfile.insert();
       tcatfile.setString("tblname", tblname);
       tcatfile.setInt("reclength", ti.recordLength());
-      tcatfile.setInt(SORTED,0);
+      tcatfile.setString(SORTED,null);
       tcatfile.close();
       
       // insert a record into fldcat for each field
@@ -80,20 +80,21 @@ public class TableMgr {
    }
    
    /**
+    * CS4432: Added retrieval of sorted value
     * Retrieves the metadata for the specified table
     * out of the catalog.
     * @param tblname the name of the table
     * @param tx the transaction
     * @return the table's stored metadata
     */
-   public TableInfo getTableInfo(String tblname, Transaction tx) { //TODO: Use this to get the table info.
+   public TableInfo getTableInfo(String tblname, Transaction tx) {
       RecordFile tcatfile = new RecordFile(tcatInfo, tx);
       int reclen = -1;
-      boolean isSorted;
+      String sorted = null;
       while (tcatfile.next())
          if(tcatfile.getString("tblname").equals(tblname)) {
          reclen = tcatfile.getInt("reclength");
-         isSorted = tcatfile.getInt("sorted") != 0;
+         sorted = tcatfile.getString("sorted");
          break;
       }
       tcatfile.close();
@@ -111,7 +112,7 @@ public class TableMgr {
          sch.addField(fldname, fldtype, fldlen);
       }
       fcatfile.close();
-      return new TableInfo(tblname, sch, offsets, reclen);
+      return new TableInfo(tblname, sch, offsets, reclen, sorted);
    }
 
    public void setTableSorted(String tblname, Transaction tx, boolean isSorted) {

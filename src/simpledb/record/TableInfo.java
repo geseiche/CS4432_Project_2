@@ -12,7 +12,7 @@ public class TableInfo {
    private Schema schema;
    private Map<String,Integer> offsets;
    private int recordlen;
-   private boolean isSorted;
+   private String sorted;
    private String tblname;
    
    /**
@@ -50,6 +50,18 @@ public class TableInfo {
       this.schema    = schema;
       this.offsets   = offsets;
       this.recordlen = recordlen;
+      this.sorted = null;
+   }
+
+   /**
+    * CS4432: Added an override constructor to set the field that the table is sorted on.
+    */
+   public TableInfo(String tblname, Schema schema, Map<String,Integer> offsets, int recordlen, String sorted) {
+      this.tblname   = tblname;
+      this.schema    = schema;
+      this.offsets   = offsets;
+      this.recordlen = recordlen;
+      this.sorted = sorted;
    }
    
    /**
