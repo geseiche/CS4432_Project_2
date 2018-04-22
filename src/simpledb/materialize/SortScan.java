@@ -17,6 +17,7 @@ public class SortScan implements Scan {
    private RecordComparator comp;
    private boolean hasmore1, hasmore2=false;
    private List<RID> savedposition;
+   private String tblname;
    
    /**
     * Creates a sort scan, given a list of 1 or 2 runs.
@@ -25,9 +26,10 @@ public class SortScan implements Scan {
     * @param runs the list of runs
     * @param comp the record comparator
     */
-   public SortScan(List<TempTable> runs, RecordComparator comp) { //TODO: Pass the table names into this class to be used while sorting
+   public SortScan(List<TempTable> runs, String tblname, RecordComparator comp) { //TODO: Pass the table names into this class to be used while sorting
       this.comp = comp;
-      s1 = (UpdateScan) runs.get(0).open();
+      this.tblname = tblname;
+      s1 = (UpdateScan) runs.get(0).open(); //TODO: Write sorted file to disk
       hasmore1 = s1.next();
       if (runs.size() > 1) {
          s2 = (UpdateScan) runs.get(1).open();

@@ -4,6 +4,7 @@ import simpledb.tx.Transaction;
 import simpledb.record.*;
 import simpledb.query.*;
 
+import java.rmi.activation.ActivationGroup_Stub;
 import java.util.*;
 
 /**
@@ -15,6 +16,7 @@ public class SortPlan implements Plan {
    private Transaction tx;
    private Schema sch;
    private RecordComparator comp;
+   private String tblname;
    
    /**
     * Creates a sort plan for the specified query.
@@ -22,8 +24,9 @@ public class SortPlan implements Plan {
     * @param sortfields the fields to sort by
     * @param tx the calling transaction
     */
-   public SortPlan(Plan p, List<String> sortfields, Transaction tx) { //TODO: Edit to take table names and setup the SortScan properly
+   public SortPlan(Plan p, String tblname, List<String> sortfields, Transaction tx) { //TODO: Edit to take table names and setup the SortScan properly
       this.p = p;
+      this.tblname = tblname;
       this.tx = tx;
       sch = p.schema();
       comp = new RecordComparator(sortfields);
@@ -41,7 +44,7 @@ public class SortPlan implements Plan {
       src.close();
       while (runs.size() > 2)
          runs = doAMergeIteration(runs);
-      return new SortScan(runs, comp);
+      return new SortScan(runs, tblname, comp);
    }
    
    /**
@@ -96,14 +99,28 @@ public class SortPlan implements Plan {
       UpdateScan currentscan = currenttemp.open();
       while (copy(src, currentscan))
          if (comp.compare(src, currentscan) < 0) {
-         // start a new run
-         currentscan.close();
-         currenttemp = new TempTable(sch, tx);
-         temps.add(currenttemp);
-         currentscan = (UpdateScan) currenttemp.open();
-      }
+            // start a new run
+            currentscan.close();
+            currenttemp = new TempTable(sch, tx);
+            temps.add(currenttemp);
+            currentscan = (UpdateScan) currenttemp.open();
+         }
       currentscan.close();
       return temps;
+   }
+
+   private TempTable getSortedTable(Scan src) {
+      TempTable temp = new TempTable(sch, tx);
+      src.beforeFirst();
+      if(!src.next()) {
+         return temp;
+      }
+      UpdateScan scan = temp.open();
+      while(copy(src, scan)) {
+         //Just loop
+      }
+      scan.close();
+      return temp;
    }
    
    private List<TempTable> doAMergeIteration(List<TempTable> runs) {
