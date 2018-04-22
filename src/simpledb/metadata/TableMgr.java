@@ -1,5 +1,6 @@
 package simpledb.metadata;
 
+import javafx.scene.control.Tab;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
 import java.util.*;
@@ -34,6 +35,7 @@ public class TableMgr {
       Schema tcatSchema = new Schema();
       tcatSchema.addStringField("tblname", MAX_NAME);
       tcatSchema.addIntField("reclength");
+      tcatSchema.addStringField(SORTED, MAX_NAME);
       tcatInfo = new TableInfo("tblcat", tcatSchema);
       
       Schema fcatSchema = new Schema();
@@ -63,7 +65,7 @@ public class TableMgr {
       tcatfile.insert();
       tcatfile.setString("tblname", tblname);
       tcatfile.setInt("reclength", ti.recordLength());
-      tcatfile.setString(SORTED,null);
+      tcatfile.setString(SORTED,"");
       tcatfile.close();
       
       // insert a record into fldcat for each field
@@ -77,6 +79,19 @@ public class TableMgr {
          fcatfile.setInt   ("offset", ti.offset(fldname));
       }
       fcatfile.close();
+   }
+
+   /**
+    * CS4432: Updates the TableInfo on file to have the proper sorting tag.
+    */
+   public void updateTableInfo(String tblname, TableInfo info, Transaction tx) {
+      RecordFile tcatfile = new RecordFile(tcatInfo, tx);
+      while (tcatfile.next())
+         if(tcatfile.getString("tblname").equals(tblname)) {
+            tcatfile.setString(SORTED, info.sorted);
+            break;
+         }
+      tcatfile.close();
    }
    
    /**
@@ -94,7 +109,7 @@ public class TableMgr {
       while (tcatfile.next())
          if(tcatfile.getString("tblname").equals(tblname)) {
          reclen = tcatfile.getInt("reclength");
-         sorted = tcatfile.getString("sorted");
+         sorted = tcatfile.getString(SORTED);
          break;
       }
       tcatfile.close();

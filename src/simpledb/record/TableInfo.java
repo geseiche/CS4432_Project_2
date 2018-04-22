@@ -1,5 +1,7 @@
 package simpledb.record;
 
+import simpledb.metadata.TableMgr;
+
 import static java.sql.Types.INTEGER;
 import static simpledb.file.Page.*;
 import java.util.*;
@@ -12,7 +14,7 @@ public class TableInfo {
    private Schema schema;
    private Map<String,Integer> offsets;
    private int recordlen;
-   private String sorted;
+   public String sorted;
    private String tblname;
    
    /**

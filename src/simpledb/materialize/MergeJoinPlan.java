@@ -32,11 +32,11 @@ public class MergeJoinPlan implements Plan {
       this.fldname2 = tblname2;
       this.fldname1 = fldname1;
       List<String> sortlist1 = Arrays.asList(fldname1);
-      this.p1 = new SortPlan(p1, tblname1, sortlist1, tx);
+      this.p1 = new SmartSortPlan(p1, tblname1, sortlist1, tx);
       
       this.fldname2 = fldname2;
       List<String> sortlist2 = Arrays.asList(fldname2);
-      this.p2 = new SortPlan(p2, tblname2, sortlist2, tx);
+      this.p2 = new SmartSortPlan(p2, tblname2, sortlist2, tx);
       
       sch.addAll(p1.schema());
       sch.addAll(p2.schema());
@@ -49,7 +49,7 @@ public class MergeJoinPlan implements Plan {
      */
    public Scan open() {
       Scan s1 = p1.open();
-      SortScan s2 = (SortScan) p2.open();
+      SmartSortScan s2 = (SmartSortScan) p2.open();
       return new MergeJoinScan(s1, s2, tblname1, tblname2, fldname1, fldname2);
    }
    

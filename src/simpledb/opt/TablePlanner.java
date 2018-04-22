@@ -80,8 +80,8 @@ class TablePlanner {
     */
    public Plan makeMergeJoinPlan(Plan current) {
       Schema currsch = current.schema();
-      String tblname1 = myplan.tableName(); // Get the table name to pass down to SortScan
-      String tblname2 = current.tableName(); // Get the table name to pass down to SortScan
+      String tblname1 = myplan.tableName(); // Get the table name to pass down to SmartSortScan
+      String tblname2 = current.tableName(); // Get the table name to pass down to SmartSortScan
       Predicate joinpred = mypred.joinPred(myschema, currsch);
       if (joinpred == null)
          return null;
