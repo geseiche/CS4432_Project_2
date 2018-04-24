@@ -5,6 +5,10 @@ import simpledb.record.*;
 import simpledb.query.*;
 import simpledb.index.Index;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -40,18 +44,22 @@ public class ExHashIndex implements Index {
         this.idxname = idxname;
         this.sch = sch;
         this.tx = tx;
+        this.globalSchema = new Schema();
         this.globalSchema.addIntField("bits");
         this.globalSchema.addStringField("filename", 20);
         this.globalSchema.addIntField("localdepth");
         TableScan tempScan = new TableScan(new TableInfo(GLOBAL_TABLE, globalSchema),tx);
-        tempScan.insert();
-        tempScan.setInt("bits", 0);
-        tempScan.setString("filename", this.idxname + 0);
-        tempScan.setInt("localdepth", 1);
-        tempScan.insert();
-        tempScan.setInt("bits", 1);
-        tempScan.setString("filename", this.idxname + 1);
-        tempScan.setInt("localdepth", 1);
+        //if there are no buckets in the directory, add buckets with a depth of 1
+        if(!tempScan.next()){
+            tempScan.insert();
+            tempScan.setInt("bits", 0);
+            tempScan.setString("filename", this.idxname + 0);
+            tempScan.setInt("localdepth", 1);
+            tempScan.insert();
+            tempScan.setInt("bits", 1);
+            tempScan.setString("filename", this.idxname + 1);
+            tempScan.setInt("localdepth", 1);
+        }
     }
 
     /**
@@ -66,14 +74,20 @@ public class ExHashIndex implements Index {
     public void beforeFirst(Constant searchkey) {
         close();
         this.searchkey = searchkey;
-        int bucket = searchkey.hashCode() % (int)Math.pow(2, globalDepth);//Mask the last global_length bits
-        //TODO
-        //make global table TAbleInfo w Schema (bit, filename, localdepth)
+        //make global table TableInfo with Schema (bit, filename, localdepth)
         TableInfo global = new TableInfo(GLOBAL_TABLE, globalSchema);
         //new table scan on global table
         TableScan tempScan = new TableScan(global, tx);
+        //find the global depth of the directory
+        int gsize = 0;
+        while (tempScan.next()){
+            gsize++;
+        }
+        globalDepth = (int)(Math.log(gsize)/Math.log(2));
+        int bucket = searchkey.hashCode() % (int)Math.pow(2, globalDepth);//Mask the last globalDepth bits
         //call next until you find the bit string
         //get file name and localdepth w getVal() and store
+        tempScan.beforeFirst();
         while (tempScan.next()){
             if(tempScan.getInt("bits")== bucket){
                 localDepth = tempScan.getInt("localdepth");
@@ -81,6 +95,7 @@ public class ExHashIndex implements Index {
                 break;
             }
         }
+        tempScan.close();
         //use the bucket table name in the given ti
         String tblname = idxname + bucket; //do I even still need this?
         TableInfo ti = new TableInfo(bucketFileName, sch);
@@ -118,24 +133,32 @@ public class ExHashIndex implements Index {
      */
     public void insert(Constant val, RID rid) {
         beforeFirst(val);
-        //TODO check if bucket is full or needs to be split, if so, split; where does the local depth go?
-        //get length by calling next
+        //get number of records in the bucket by calling next
         int size = 0;
         while (ts.next()){
             size++;
         }
+        //if the bucket is full and splitting must happen
         while(size>=MAX_BCKT_CAP){
+            //find the global depth
             TableScan tempScan = new TableScan(new TableInfo(GLOBAL_TABLE, globalSchema), tx);
-            //if localdepth = globaldepth
+            int gsize = 0;
+            while (tempScan.next()){
+                gsize++;
+            }
+            globalDepth = (int)(Math.log(gsize)/Math.log(2));
+            //if localdepth = globaldepth then you must double the size of the directory
             if(localDepth == globalDepth){
-                //read global file
-                //delete all the records
-                //re-insert with longer bit string
                 globalDepth++;
                 ArrayList<Bucket> tempList = new ArrayList<>();
+                tempScan.beforeFirst();
+                //temporarily store copies of the old directory in an ArrayList of buckets
                 while (tempScan.next()){
+                    //note: the bits of the bucket is increased by the size of the local depth because the current buckets have a most significant bit of 0 under the new global depth
+                    //   and the tempList will be used to add in the buckets with the most significant bit of 1 under the new global depth
                     tempList.add(new Bucket(tempScan.getInt("bits")+ (int)Math.pow(2, globalDepth-1), tempScan.getString("filename"), tempScan.getInt("localdepth")));
                 }
+                //create the new buckets from the temporary list
                 for (Bucket b : tempList){
                     tempScan.insert();
                     tempScan.setInt("bits", b.getBits());
@@ -148,12 +171,13 @@ public class ExHashIndex implements Index {
             localDepth++;
 
             //split the bucket
-            String bucketNameA = bucketFileName;
+            String bucketNameA = bucketFileName; //bucket with the most significant bit of 0
             TableScan scanA = new TableScan(new TableInfo(bucketNameA,sch),tx);
             int bucketBbits = (searchkey.hashCode() % (int)Math.pow(2, localDepth-1))+ (int)Math.pow(2, localDepth-1);
-            String bucketNameB = idxname + bucketBbits;
+            String bucketNameB = idxname + bucketBbits;//bucket with the most significant bit of 1
             TableScan scanB = new TableScan(new TableInfo(bucketNameB,sch),tx);
             while (scanA.next()){
+                //if the record no longer belongs in A because it now belongs in B
                 if (scanA.getVal("dataval").hashCode()%(int)Math.pow(2, localDepth)== bucketBbits){
                     //remove from A and add to B
                     scanB.insert();
@@ -163,13 +187,17 @@ public class ExHashIndex implements Index {
                     scanA.delete();
                 }
             }
+            scanA.close();
+            scanB.close();
 
-            //change filenames in table
+            //change filenames in table to correctly point to BucketA and BucketB
+            //leave all other buckets alone because their pointers do not change
             tempScan.beforeFirst();
             int mostSigBit = (int)Math.pow(2, localDepth-1);
             while (tempScan.next()){
                 int bucket = tempScan.getInt("bits");
                 if(bucket % mostSigBit == searchkey.hashCode() % mostSigBit){
+                    tempScan.setInt("localdepth", localDepth);
                     if(bucket/mostSigBit>=1){
                         tempScan.setString("filename", bucketNameB);
                     } else {
@@ -177,6 +205,7 @@ public class ExHashIndex implements Index {
                     }
                 }
             }
+            tempScan.close();
 
             //set ts to new bucket
             beforeFirst(val);
@@ -187,10 +216,23 @@ public class ExHashIndex implements Index {
                 size++;
             }
         }
+        //insert the new index record
         ts.insert();
         ts.setInt("block", rid.blockNumber());
         ts.setInt("id", rid.id());
         ts.setVal("dataval", val);
+
+        //for debugging only; this writes the index to a file each time the index is updated
+        /*
+        try {
+            BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt", true));
+            writer.append(this.toString());
+            writer.close();
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+        */
+
     }
 
     /**
@@ -228,7 +270,26 @@ public class ExHashIndex implements Index {
      * @param rpb the number of records per block (not used here)
      * @return the cost of traversing the index
      */
+    //TODO
     public int searchCost(int numblocks, int rpb){
         return numblocks / NUM_BUCKETS;
+    }
+
+    @Override
+    public String toString() {
+        String finalString = "";
+        TableScan scan = new TableScan(new TableInfo(GLOBAL_TABLE, globalSchema), tx);
+        //scans the directory
+        while (scan.next()){
+            finalString = finalString + "\n" + Integer.toBinaryString(scan.getInt("bits"));
+            TableScan innerscan = new TableScan(new TableInfo(scan.getString("filename"), sch), tx);
+            //scan each bucket
+            while (innerscan.next()){
+                finalString = finalString + "\n\t" + innerscan.getVal("dataval").hashCode() + "\t" + Integer.toBinaryString(innerscan.getVal("dataval").hashCode());
+            }
+            innerscan.close();
+        }
+        scan.close();
+        return finalString + "\n----------------\n";
     }
 }

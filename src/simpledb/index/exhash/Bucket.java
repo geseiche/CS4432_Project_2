@@ -1,5 +1,6 @@
 package simpledb.index.exhash;
 
+//CS4432: Added a bucket class used to temporarily store buckets
 public class Bucket {
     private int bits;
     private String fileName;
