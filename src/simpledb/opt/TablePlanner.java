@@ -82,9 +82,6 @@ class TablePlanner {
       Schema currsch = current.schema();
       String tblname1 = myplan.tableName(); // Get the table name to pass down to SmartSortScan
       String tblname2 = current.tableName(); // Get the table name to pass down to SmartSortScan
-      Predicate joinpred = mypred.joinPred(myschema, currsch);
-      if (joinpred == null)
-         return null;
       Plan p = makeMergeJoin(current, currsch, tblname1, tblname2);
       return p;
    }
@@ -135,9 +132,8 @@ class TablePlanner {
     */
    private Plan makeMergeJoin(Plan current, Schema currsch, String tblname1, String tblname2) {
       for (String fldname : myschema.fields()) {
-         String outerfield = mypred.equatesWithField(fldname);
-         if (outerfield != null && currsch.hasField(outerfield)) {
-            Plan p = new MergeJoinPlan(myplan, current, tblname1, tblname2, fldname, outerfield, tx); // Create the MergeJoinPlan on the matching fields
+         if (currsch.hasField(fldname)) {
+            Plan p = new MergeJoinPlan(myplan, current, tblname1, tblname2, fldname, tx); // Create the MergeJoinPlan on the matching fields
             p = addSelectPred(p);
             return addJoinPred(p, currsch);
          }

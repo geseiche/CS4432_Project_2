@@ -23,18 +23,17 @@ public class MergeJoinPlan implements Plan {
     * @param p2 the RHS query plan
     * @param tblname1 the LHS table name
     * @param tblname2 the RHS table name
-    * @param fldname1 the LHS join field
-    * @param fldname2 the RHS join field
+    * @param fldname the join field
     * @param tx the calling transaction
     */
-   public MergeJoinPlan(Plan p1, Plan p2, String tblname1, String tblname2, String fldname1, String fldname2, Transaction tx) {
+   public MergeJoinPlan(Plan p1, Plan p2, String tblname1, String tblname2, String fldname, Transaction tx) {
       this.tblname1 = tblname1;
-      this.fldname2 = tblname2;
-      this.fldname1 = fldname1;
+      this.tblname2 = tblname2;
+      this.fldname1 = fldname;
       List<String> sortlist1 = Arrays.asList(fldname1);
       this.p1 = new SmartSortPlan(p1, tblname1, sortlist1, tx);
       
-      this.fldname2 = fldname2;
+      this.fldname2 = fldname;
       List<String> sortlist2 = Arrays.asList(fldname2);
       this.p2 = new SmartSortPlan(p2, tblname2, sortlist2, tx);
       

@@ -51,8 +51,8 @@ public class SmartSortPlan implements Plan {
       else {
          Scan src = p.open();
          List<TempTable> tempList = splitIntoRuns(src);
-         while (runs.size() > 2) {
-            runs = doAMergeIteration(runs);
+         while (tempList.size() > 2) {
+            tempList = doAMergeIteration(tempList);
          }
          src.close();
          performSort(new SmartSortScan(tempList, tblname, comp), tblInfo, tx);
