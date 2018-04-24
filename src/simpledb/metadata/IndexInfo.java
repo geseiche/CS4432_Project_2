@@ -53,7 +53,6 @@ public class IndexInfo {
    public Index open() {
       Schema sch = schema();
       //CS4432: Added try/catch to handle invalid index types
-      // @KyleCarrero is this an okay way to do the exception?
       try {
          // CS4432: Create index of correct type
          if(idxtype.equals("sh")){
