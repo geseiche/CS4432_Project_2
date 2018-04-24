@@ -1,5 +1,7 @@
 package simpledb.record;
 
+import simpledb.metadata.TableMgr;
+
 import static java.sql.Types.INTEGER;
 import static simpledb.file.Page.*;
 import java.util.*;
@@ -12,6 +14,7 @@ public class TableInfo {
    private Schema schema;
    private Map<String,Integer> offsets;
    private int recordlen;
+   public String sorted;
    private String tblname;
    
    /**
@@ -49,6 +52,18 @@ public class TableInfo {
       this.schema    = schema;
       this.offsets   = offsets;
       this.recordlen = recordlen;
+      this.sorted = null;
+   }
+
+   /**
+    * CS4432: Added an override constructor to set the field that the table is sorted on.
+    */
+   public TableInfo(String tblname, Schema schema, Map<String,Integer> offsets, int recordlen, String sorted) {
+      this.tblname   = tblname;
+      this.schema    = schema;
+      this.offsets   = offsets;
+      this.recordlen = recordlen;
+      this.sorted = sorted;
    }
    
    /**

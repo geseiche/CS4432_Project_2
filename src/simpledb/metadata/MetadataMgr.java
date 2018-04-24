@@ -20,6 +20,13 @@ public class MetadataMgr {
    public void createTable(String tblname, Schema sch, Transaction tx) {
       tblmgr.createTable(tblname, sch, tx);
    }
+
+   /**
+    * CS4432: Update the sorted field on file for the existing TableInfo
+    */
+   public void updateTableInfo(String tblname, TableInfo info, Transaction tx) {
+      tblmgr.updateTableInfo(tblname, info, tx);
+   }
    
    public TableInfo getTableInfo(String tblname, Transaction tx) {
       return tblmgr.getTableInfo(tblname, tx);
