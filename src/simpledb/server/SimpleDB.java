@@ -3,6 +3,7 @@ package simpledb.server;
 import simpledb.file.FileMgr;
 import simpledb.buffer.*;
 import simpledb.opt.ExploitSortQueryPlanner;
+import simpledb.opt.HeuristicQueryPlanner;
 import simpledb.tx.Transaction;
 import simpledb.log.LogMgr;
 import simpledb.metadata.MetadataMgr;
