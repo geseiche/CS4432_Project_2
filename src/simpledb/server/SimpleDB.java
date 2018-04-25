@@ -3,6 +3,7 @@ package simpledb.server;
 import simpledb.file.FileMgr;
 import simpledb.buffer.*;
 import simpledb.opt.ExploitSortQueryPlanner;
+import simpledb.opt.HeuristicQueryPlanner;
 import simpledb.tx.Transaction;
 import simpledb.log.LogMgr;
 import simpledb.metadata.MetadataMgr;
@@ -23,7 +24,7 @@ import simpledb.index.planner.IndexUpdatePlanner;
  * @author Edward Sciore
  */
 public class SimpleDB {
-   public static int BUFFER_SIZE = 8;
+   public static int BUFFER_SIZE = 100;//CS4432: Changed buffer size from 8 to 100
    public static String LOG_FILE = "simpledb.log";
    
    private static FileMgr     fm;

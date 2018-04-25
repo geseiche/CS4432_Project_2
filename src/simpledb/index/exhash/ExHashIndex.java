@@ -23,16 +23,17 @@ import java.util.HashMap;
 public class ExHashIndex implements Index {
     private int NUM_BUCKETS = 1; //number of buckets in the directory
     private int globalDepth = 1; //global depth of the directory
-    private static int MAX_BCKT_CAP = 4; //max number of keys in each bucket
+    private static int MAX_BCKT_CAP = 16; //max number of keys in each bucket
     private static String GLOBAL_TABLE = "globalTable";
     private String idxname;
     private Schema sch;
-    private Schema globalSchema; //schema for the directory
+    private static Schema globalSchema; //schema for the directory
     private Transaction tx;
     private Constant searchkey = null;
     private TableScan ts = null;
     private int localDepth;
     private String bucketFileName;
+    private static int staticDirectoryLength;
 
     /**
      * Opens a hash index for the specified index.
@@ -60,6 +61,7 @@ public class ExHashIndex implements Index {
             tempScan.setString("filename", this.idxname + 1);
             tempScan.setInt("localdepth", 1);
         }
+        tempScan.close();
     }
 
     /**
@@ -222,6 +224,15 @@ public class ExHashIndex implements Index {
         ts.setInt("id", rid.id());
         ts.setVal("dataval", val);
 
+        //print out the size of the global table
+        TableScan tempScan = new TableScan(new TableInfo(GLOBAL_TABLE, globalSchema), tx);
+        int gsize = 0;
+        while (tempScan.next()){
+            gsize++;
+        }
+        System.out.println("Global Directory Size: " + gsize);
+        tempScan.close();
+
         //for debugging only; this writes the index to a file each time the index is updated
         /*
         try {
@@ -271,8 +282,11 @@ public class ExHashIndex implements Index {
      * @return the cost of traversing the index
      */
     //TODO
-    public int searchCost(int numblocks, int rpb){
-        return numblocks / NUM_BUCKETS;
+    //SOS HELP
+    public static int searchCost(int numblocks, int rpb){
+        int globalTableSize = -1; //HARDCODE THIS
+        return globalTableSize/rpb + MAX_BCKT_CAP;
+
     }
 
     @Override
