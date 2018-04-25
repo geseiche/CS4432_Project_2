@@ -86,8 +86,23 @@ public class IndexInfo {
       TableInfo idxti = new TableInfo("", schema());
       int rpb = BLOCK_SIZE / idxti.recordLength();
       int numblocks = si.recordsOutput() / rpb;
-      // Call HashIndex.searchCost for hash indexing
-      return HashIndex.searchCost(numblocks, rpb);
+      //CS4432: Added try/catch to handle invalid index types
+      try {
+         // CS4432: Return I/O cost of the correct type
+         if(idxtype.equals("sh")){
+            return HashIndex.searchCost(numblocks, rpb);
+         } else if (idxtype.equals("bt")){
+            return BTreeIndex.searchCost(numblocks, rpb);
+         } else if (idxtype.equals("eh")){
+            return ExHashIndex.searchCost(numblocks, rpb);
+         } else {
+            throw new Exception("Not valid index type");
+         }
+      } catch (Exception e){
+         System.out.println(e.getMessage());
+         e.printStackTrace();
+         return -1;
+      }
    }
    
    /**

@@ -1,5 +1,8 @@
 //Use the following java code to create data.
 /******************************************************************/
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.SQLException;
@@ -7,7 +10,7 @@ import java.sql.Statement;
 import java.util.Random;
 import simpledb.remote.SimpleDriver;
 public class CreateTestTables {
-    final static int maxSize=5000;
+    final static int maxSize=1000;
     /**
      * @param args
      */
@@ -47,9 +50,9 @@ public class CreateTestTables {
                     "  a2 int"+
                     ")");
 
-//            s.executeUpdate("create sh index idx1 on test1 (a1)");
-//            s.executeUpdate("create ex index idx2 on test2 (a1)");
-//            s.executeUpdate("create bt index idx3 on test3 (a1)");
+            s.executeUpdate("create sh index idx2 on test2 (a1)");
+            s.executeUpdate("create eh index idx3 on test3 (a1)");
+            s.executeUpdate("create bt index idx4 on test4 (a1)");
             for(int i=1;i<6;i++)
             {
                 if(i!=5)
@@ -68,9 +71,10 @@ public class CreateTestTables {
                     }
                 }
             }
+
             conn.close();
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }finally
