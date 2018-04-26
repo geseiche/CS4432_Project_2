@@ -20,6 +20,13 @@ public class MetadataMgr {
    public void createTable(String tblname, Schema sch, Transaction tx) {
       tblmgr.createTable(tblname, sch, tx);
    }
+
+   /**
+    * CS4432: Update the sorted field on file for the existing TableInfo
+    */
+   public void updateTableInfo(String tblname, TableInfo info, Transaction tx) {
+      tblmgr.updateTableInfo(tblname, info, tx);
+   }
    
    public TableInfo getTableInfo(String tblname, Transaction tx) {
       return tblmgr.getTableInfo(tblname, tx);
@@ -32,9 +39,16 @@ public class MetadataMgr {
    public String getViewDef(String viewname, Transaction tx) {
       return viewmgr.getViewDef(viewname, tx);
    }
-   
+
+   //CS4432: Overloaded create index to take the index type and give it to the createIndex called
+   public void createIndex(String idxtype, String idxname, String tblname, String fldname, Transaction tx) {
+      idxmgr.createIndex(idxtype, idxname, tblname, fldname, tx);
+   }
+
+   //CS4432: Since idxmgr.createIndex now requires an index type, if no index type is given, the default is a static hash
+   //Not called since the UpdatePlanner was change, but would be necessary if the BasicUpdatePlanner was used again
    public void createIndex(String idxname, String tblname, String fldname, Transaction tx) {
-      idxmgr.createIndex(idxname, tblname, fldname, tx);
+      idxmgr.createIndex("sh", idxname, tblname, fldname, tx);
    }
    
    public Map<String,IndexInfo> getIndexInfo(String tblname, Transaction tx) {

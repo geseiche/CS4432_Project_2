@@ -11,27 +11,31 @@ import java.util.*;
  */
 public class MergeJoinPlan implements Plan {
    private Plan p1, p2;
-   private String fldname1, fldname2;
+   private String tblname1, tblname2, fldname1, fldname2;
    private Schema sch = new Schema();
    
    /**
+    * CS4432: Store table names for the tables involved in the merge in order to get the TableInfo for both later
     * Creates a mergejoin plan for the two specified queries.
     * The RHS must be materialized after it is sorted, 
     * in order to deal with possible duplicates.
     * @param p1 the LHS query plan
     * @param p2 the RHS query plan
-    * @param fldname1 the LHS join field
-    * @param fldname2 the RHS join field
+    * @param tblname1 the LHS table name
+    * @param tblname2 the RHS table name
+    * @param fldname the join field
     * @param tx the calling transaction
     */
-   public MergeJoinPlan(Plan p1, Plan p2, String fldname1, String fldname2, Transaction tx) {
-      this.fldname1 = fldname1;
+   public MergeJoinPlan(Plan p1, Plan p2, String tblname1, String tblname2, String fldname, Transaction tx) {
+      this.tblname1 = tblname1;
+      this.tblname2 = tblname2;
+      this.fldname1 = fldname;
       List<String> sortlist1 = Arrays.asList(fldname1);
-      this.p1 = new SortPlan(p1, sortlist1, tx);
+      this.p1 = new SmartSortPlan(p1, tblname1, sortlist1, tx);
       
-      this.fldname2 = fldname2;
+      this.fldname2 = fldname;
       List<String> sortlist2 = Arrays.asList(fldname2);
-      this.p2 = new SortPlan(p2, sortlist2, tx);
+      this.p2 = new SmartSortPlan(p2, tblname2, sortlist2, tx);
       
       sch.addAll(p1.schema());
       sch.addAll(p2.schema());
@@ -44,8 +48,8 @@ public class MergeJoinPlan implements Plan {
      */
    public Scan open() {
       Scan s1 = p1.open();
-      SortScan s2 = (SortScan) p2.open();
-      return new MergeJoinScan(s1, s2, fldname1, fldname2);
+      SmartSortScan s2 = (SmartSortScan) p2.open();
+      return new MergeJoinScan(s1, s2, tblname1, tblname2, fldname1, fldname2);
    }
    
    /**

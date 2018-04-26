@@ -2,11 +2,12 @@ package simpledb.server;
 
 import simpledb.file.FileMgr;
 import simpledb.buffer.*;
+import simpledb.opt.ExploitSortQueryPlanner;
+import simpledb.opt.HeuristicQueryPlanner;
 import simpledb.tx.Transaction;
 import simpledb.log.LogMgr;
 import simpledb.metadata.MetadataMgr;
 import simpledb.planner.*;
-import simpledb.opt.HeuristicQueryPlanner;
 import simpledb.index.planner.IndexUpdatePlanner;
 
 /**
@@ -23,7 +24,7 @@ import simpledb.index.planner.IndexUpdatePlanner;
  * @author Edward Sciore
  */
 public class SimpleDB {
-   public static int BUFFER_SIZE = 8;
+   public static int BUFFER_SIZE = 100;//CS4432: Changed buffer size from 8 to 100
    public static String LOG_FILE = "simpledb.log";
    
    private static FileMgr     fm;
@@ -100,8 +101,10 @@ public class SimpleDB {
     * To change how the planner works, modify this method.
     * @return the system's planner for SQL commands
     */public static Planner planner() {
-      QueryPlanner  qplanner = new BasicQueryPlanner();
-      UpdatePlanner uplanner = new BasicUpdatePlanner();
+      //Uncomment a qplanner implementation to use it
+      QueryPlanner  qplanner = new HeuristicQueryPlanner();//CS4432: switched BasicQueryPlanner to HeuristicQueryPlanner
+      //QueryPlanner  qplanner = new ExploitSortQueryPlanner(); //CS4432: switched BasicQueryPlanner to ExploitSortQueryPlanner
+      UpdatePlanner uplanner = new IndexUpdatePlanner(); //CS4432: switched BasicUpdatePlanner to IndexUpdatePlanner
       return new Planner(qplanner, uplanner);
    }
 }

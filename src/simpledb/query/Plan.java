@@ -44,4 +44,13 @@ public interface Plan {
     * @return the query's schema
     */
    public Schema schema();
+
+   /**
+    * CS4432: Get the table name for this plan.
+    * This is a default implementation since it is only really needed for TablePlan
+    * @return the table name for this plan
+    */
+   default public String tableName() {
+      return null;
+   }
 }

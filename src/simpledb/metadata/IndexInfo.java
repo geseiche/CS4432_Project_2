@@ -2,6 +2,8 @@ package simpledb.metadata;
 
 import static java.sql.Types.INTEGER;
 import static simpledb.file.Page.BLOCK_SIZE;
+
+import simpledb.index.exhash.ExHashIndex;
 import simpledb.server.SimpleDB;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
@@ -19,20 +21,24 @@ import simpledb.index.btree.BTreeIndex; //in case we change to btree indexing
  * @author Edward Sciore
  */
 public class IndexInfo {
-   private String idxname, fldname;
+   //CS4432: Added index type field
+   private String idxtype, idxname, fldname;
    private Transaction tx;
    private TableInfo ti;
    private StatInfo si;
    
    /**
     * Creates an IndexInfo object for the specified index.
+    * @param idxtype the type of the index //CS4432
     * @param idxname the name of the index
     * @param tblname the name of the table
     * @param fldname the name of the indexed field
     * @param tx the calling transaction
     */
-   public IndexInfo(String idxname, String tblname, String fldname,
+   public IndexInfo(String idxtype, String idxname, String tblname, String fldname,
                     Transaction tx) {
+      //CS4432: Set index type field
+      this.idxtype = idxtype;
       this.idxname = idxname;
       this.fldname = fldname;
       this.tx = tx;
@@ -46,8 +52,23 @@ public class IndexInfo {
     */
    public Index open() {
       Schema sch = schema();
-      // Create new HashIndex for hash indexing
-      return new HashIndex(idxname, sch, tx);
+      //CS4432: Added try/catch to handle invalid index types
+      try {
+         // CS4432: Create index of correct type
+         if(idxtype.equals("sh")){
+            return new HashIndex(idxname,sch, tx);
+         } else if (idxtype.equals("bt")){
+            return new BTreeIndex(idxname, sch, tx);
+         } else if (idxtype.equals("eh")){
+            return new ExHashIndex(idxname, sch, tx);
+         } else {
+            throw new Exception("Not valid index type");
+         }
+      } catch (Exception e){
+         System.out.println(e.getMessage());
+         e.printStackTrace();
+         return null;
+      }
    }
    
    /**
@@ -65,8 +86,23 @@ public class IndexInfo {
       TableInfo idxti = new TableInfo("", schema());
       int rpb = BLOCK_SIZE / idxti.recordLength();
       int numblocks = si.recordsOutput() / rpb;
-      // Call HashIndex.searchCost for hash indexing
-      return HashIndex.searchCost(numblocks, rpb);
+      //CS4432: Added try/catch to handle invalid index types
+      try {
+         // CS4432: Return I/O cost of the correct type
+         if(idxtype.equals("sh")){
+            return HashIndex.searchCost(numblocks, rpb);
+         } else if (idxtype.equals("bt")){
+            return BTreeIndex.searchCost(numblocks, rpb);
+         } else if (idxtype.equals("eh")){
+            return ExHashIndex.searchCost(numblocks, rpb);
+         } else {
+            throw new Exception("Not valid index type");
+         }
+      } catch (Exception e){
+         System.out.println(e.getMessage());
+         e.printStackTrace();
+         return -1;
+      }
    }
    
    /**
